@@ -22,8 +22,6 @@ public class MioThread extends Thread {
             PrintWriter out = new PrintWriter(s.getOutputStream(), true);
             DataOutputStream outBinary = new DataOutputStream(s.getOutputStream());
 
-            File file = new File("negozio/index.html");
-
             String firstLine = in.readLine();
             System.out.println("------");
             System.out.println(firstLine);
@@ -31,15 +29,26 @@ public class MioThread extends Thread {
             String[] a = firstLine.split(" ");
             String path = a[1];
             String method = a[0];
+            String verion = a[2];
             String h;
+            int ContentLength = 0;
 
             do {
                 h = in.readLine();
                 System.out.println(h);
-            } while (!h.isEmpty());
+
+                if (h.contains("Content-Length")) { 
+                    String[] cont = h.split(" ");
+                    try {
+                        ContentLength = Integer.parseInt(cont[1]);
+                    } catch (NumberFormatException e) {
+                        System.out.println("Errore nella conversione di Content-Length in int.");
+                    }
+                }
+            } while (h != null && !h.isEmpty());
             System.out.println("la richiesta è terminata, ora rispondo!");
 
-            if (method =="GET") {
+            if (!method.equals("GET") || !method.equals("POST") || !method.equals("HEAD") || firstLine.isEmpty()) {
                 String response = "Method not allowed";
                 out.println("HTTP/1.0 405 METHOD NOT ALLOWED");
                 out.println("Content-Type: text/html");
@@ -47,15 +56,17 @@ public class MioThread extends Thread {
                 out.println("Server: BudroServer");
                 out.println("");
                 out.println(response);
-            }else{
+            } else {
                 if (path.endsWith("/")) {
                     path = path + "index.html";
                 }
             }
 
-            
+            File file = new File("negozio" + path);
 
             if (file.exists()) {
+
+                System.out.println(file.getAbsolutePath());
                 out.println("HTTP/1.0 200 OK");
                 out.println("Content-Length: " + file.length() + "");
                 out.println("Content-Type: " + getContentType(file) + "");
@@ -69,13 +80,10 @@ public class MioThread extends Thread {
                 input.close();
             }
 
-            
-            
-
             s.close();
         } catch (Exception e) {
         }
-        
+
     }
 
     private static String getContentType(File f) {
@@ -83,10 +91,10 @@ public class MioThread extends Thread {
         String nomeFile = f.getName();
         int dopoPunto = nomeFile.lastIndexOf(".");
         String estensione = "";
-    
+
         if (dopoPunto > 0) {
             estensione = nomeFile.substring(dopoPunto + 1).toLowerCase();
-    
+
             switch (estensione) {
                 // HTML, CSS, JavaScript
                 case "html":
@@ -94,10 +102,10 @@ public class MioThread extends Thread {
                 case "css":
                     return "text/css";
                 case "js":
-                    return "text/js";
+                    return "application/javascript";
                 case "json":
                     return "application/json";
-        
+
                 // Audio
                 case "mp3":
                     return "audio/mpeg";
@@ -105,11 +113,11 @@ public class MioThread extends Thread {
                     return "audio/wav";
                 case "m4a":
                     return "audio/mp4";
-        
+
                 // Video
                 case "mp4":
                     return "video/mp4";
-        
+
                 // Immagini (Grafica)
                 case "jpg":
                     return "image/jpg";
@@ -125,7 +133,7 @@ public class MioThread extends Thread {
                     return "image/svg+xml";
                 case "ico":
                     return "image/ico";
-        
+
                 // Documenti di testo
                 case "txt":
                     return "text/plain";
@@ -137,27 +145,7 @@ public class MioThread extends Thread {
                     return "text/csv";
                 case "pdf":
                     return "application/pdf";
-        
-                // File compressi
-                case "zip":
-                    return "application/zip";
-                case "tar":
-                    return "application/x-tar";
-                case "gz":
-                    return "application/gzip";
-                case "rar":
-                    return "application/x-rar-compressed";
-        
-                // Altri tipi comuni
-                case "exe":
-                    return "application/vnd.microsoft.portable-executable";
-                case "apk":
-                    return "application/vnd.android.package-archive";
-                case "iso":
-                    return "application/x-iso9660-image";
-                case "psd":
-                    return "application/vnd.adobe.photoshop";
-        
+
                 default:
                     return "application/octet-stream"; // Se non riconosciuto, tipo generico
             }
@@ -165,6 +153,5 @@ public class MioThread extends Thread {
             return "no estensioni";
         }
     }
-    
-    
+
 }

@@ -43,7 +43,7 @@ const products = [
       productName: "RALPH LAUREN AERA LACE",
       category: "Shoes",
       price: "129",
-      image: "/images/polo.webp",
+      image: "polo.webp",
       size: ['38', '39', '43', '44'],
       sale:true,
     },
@@ -96,7 +96,7 @@ function clothesPrint(prod=products){
     row.innerHTML+= `
         <div class="col-sm-4 d-flex mt-5">
             <div class="card mx-auto ${pr.sale ? "border border-3 border-danger" : ""}" style="width: 18rem;">
-                <img src="./images/${pr.image}" class="card-img-top">
+                <img src="/images/${pr.image}" class="card-img-top">
                 <div class="card-body">
                   <h5 class="card-title">${pr.productName}</h5>
                   <p class="card-text">
