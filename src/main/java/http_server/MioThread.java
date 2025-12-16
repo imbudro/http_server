@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -29,15 +30,15 @@ public class MioThread extends Thread {
             String[] a = firstLine.split(" ");
             String path = a[1];
             String method = a[0];
-            String verion = a[2];
             String h;
+
             int ContentLength = 0;
 
             do {
                 h = in.readLine();
                 System.out.println(h);
 
-                if (h.contains("Content-Length")) { 
+                if (h.contains("Content-Length")) {
                     String[] cont = h.split(" ");
                     try {
                         ContentLength = Integer.parseInt(cont[1]);
@@ -48,36 +49,57 @@ public class MioThread extends Thread {
             } while (h != null && !h.isEmpty());
             System.out.println("la richiesta è terminata, ora rispondo!");
 
-            if (!method.equals("GET") || !method.equals("POST") || !method.equals("HEAD") || firstLine.isEmpty()) {
-                String response = "Method not allowed";
-                out.println("HTTP/1.0 405 METHOD NOT ALLOWED");
-                out.println("Content-Type: text/html");
-                out.println("Content-Length: " + response.length());
-                out.println("Server: BudroServer");
-                out.println("");
-                out.println(response);
-            } else {
-                if (path.endsWith("/")) {
-                    path = path + "index.html";
-                }
+            if (path.endsWith("/")) {
+                path = path + "index.html";
             }
 
             File file = new File("negozio" + path);
 
-            if (file.exists()) {
+            switch (method) {
+                case "GET":
+                    if (file.exists()) {
+                        System.out.println(file.getAbsolutePath());
+                        out.println("HTTP/1.0 200 OK");
+                        out.println("Content-Length: " + file.length() + "");
+                        out.println("Content-Type: " + getContentType(file) + "");
+                        out.println("");
+                        sendFile(file, outBinary);
+                    } else {
+                        out.println("HTTP/1.0 404 NOT FOUND");
+                        out.println("Content-Type: text/html");
+                        out.println("");
+                    }
+                    break;
+                case "POST":
+                    String body = readBody(in, ContentLength);
+                    String response = "Received POST data: " + body;
+                    out.println("HTTP/1.0 200 OK");
+                    out.println("Content-Type: text/plain");
+                    out.println("Content-Length: " + response.length());
+                    out.println("");
+                    break;
+                case "HEAD":
+                    if (file.exists()) {
+                        out.println("HTTP/1.0 200 OK");
+                        out.println("Content-Length: " + file.length());
+                        out.println("Content-Type: " + getContentType(file));
+                        out.println("");
 
-                System.out.println(file.getAbsolutePath());
-                out.println("HTTP/1.0 200 OK");
-                out.println("Content-Length: " + file.length() + "");
-                out.println("Content-Type: " + getContentType(file) + "");
-                out.println("");
-                InputStream input = new FileInputStream(file);
-                byte[] buf = new byte[8192];
-                int n;
-                while ((n = input.read(buf)) != -1) {
-                    outBinary.write(buf, 0, n);
-                }
-                input.close();
+                    } else {
+                        out.println("HTTP/1.0 404 NOT FOUND");
+                        out.println("Content-Type: text/html");
+                        out.println("");
+                    }
+                    break;
+                default:
+                    String responseDefault = "Method not allowed";
+                    out.println("HTTP/1.0 405 METHOD NOT ALLOWED");
+                    out.println("Content-Type: text/html");
+                    out.println("Content-Length: " + responseDefault.length());
+                    out.println("Server: BudroServer");
+                    out.println("");
+                    out.println(responseDefault);
+                    break;
             }
 
             s.close();
@@ -154,4 +176,29 @@ public class MioThread extends Thread {
         }
     }
 
+    private static String readBody(BufferedReader in, int contentLength) throws IOException {
+        if (contentLength <= 0) {
+            return "";
+        }
+        char[] buf = new char[contentLength];
+        int read = 0;
+        while (read < contentLength) {
+            int n = in.read(buf, read, contentLength - read);
+            if (n == -1) {
+                break;
+            }
+            read += n;
+        }
+        return new String(buf, 0, read);
+    }
+
+    private static void sendFile(File file, DataOutputStream outBinary) throws IOException {
+        try (InputStream input = new FileInputStream(file)) {
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = input.read(buf)) != -1) {
+                outBinary.write(buf, 0, n);
+            }
+        }
+    }
 }
